@@ -1,0 +1,24 @@
+/* 
+* Date of SQLzoo access for documentation:
+* 2017-05-20
+* 
+* Topic: SELECT basics
+* 
+* Table names: 
+* world
+* 
+* Fields in tables:
+* name, continent,area, population, gdp
+*/
+
+/* Query 1: population of Germany */
+SELECT population FROM world
+  WHERE name = 'Germany'
+
+/* Query 2: population of Scandinavia */
+SELECT name, population FROM world
+  WHERE name IN ('Sweden', 'Denmark', 'Norway');
+
+/* Query 3: areas between 200k and 250k sq.km. */
+SELECT name, area FROM world
+  WHERE area BETWEEN 200000 AND 250000

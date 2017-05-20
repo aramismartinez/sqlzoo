@@ -10,9 +10,9 @@
 * game, goal, eteam
 * 
 * Fields in tables:
-* game -> id, mdate, stadium, team1, team2
-* goal -> matchid, teamid, player, gtime
-* eteam -> id, teamname, coach
+* game -> id (PK), mdate, stadium, team1 (FK), team2 (FK)
+* goal -> matchid (PK< FK), teamid (FK), player, gtime (PK)
+* eteam -> id (PK), teamname, coach
 */
 
 /* Query 1: All German goals by matchid and player's name 

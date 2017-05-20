@@ -1,0 +1,178 @@
+/* 
+* Topic: More JOIN operations, using database of movie and actor data
+*
+* Status: all query results marked as "Correct answer"
+* 
+* Date of SQLzoo access for documentation:
+* 2017-05-20
+* 
+* Table names: 
+* movie, actor, casting
+* 
+* Fields in tables:
+* movie -> id (PK), title, yr, director (FK), budget, gross
+* actor -> id (PK), name
+* casting -> movieid (PK, FK), actorid (PK, FK), ord*/
+
+/* Query 1: Films from 1962 */
+SELECT id, title
+ FROM movie
+ WHERE yr=1962
+
+/* Query 2: year of 'Citizen Kane' */
+SELECT yr
+ FROM movie
+ WHERE title='Citizen Kane'
+
+/* Query 3: Star Trek movies by year */
+SELECT id,title,yr
+ FROM movie
+ WHERE title LIKE '%Star Trek%'
+ ORDER BY yr
+
+/* Query 4: Glenn Close's id number */
+SELECT id
+ FROM actor
+ WHERE name = 'Glenn Close'
+
+/* Query 5: Casablanca's id number */
+SELECT id
+ FROM movie
+ WHERE title = 'Casablanca' 
+
+/* Query 6: Casablanca's cast list */
+/* 
+* version 1: hardcode casting.movieid value from previous query
+*/
+SELECT actor.name
+  FROM actor JOIN casting
+    ON actor.id=casting.actorid
+ WHERE casting.movieid=11768
+/* 
+* version 2: nested SELECT for casting.movieid value 
+*/
+SELECT actor.name
+  FROM actor JOIN casting
+    ON actor.id=casting.actorid
+ WHERE casting.movieid=
+       (SELECT id
+          FROM movie
+         WHERE title='Casablanca')
+
+/* Query 7: Alien's cast list 
+(nested SELECT for casting.movieid value) */
+SELECT actor.name
+  FROM actor JOIN casting
+    ON actor.id=casting.actorid
+ WHERE casting.movieid=
+       (SELECT id
+          FROM movie
+         WHERE title = 'Alien')
+
+/* Query 8: The bones of Harrison Ford's imdb page? */
+SELECT movie.title
+  FROM movie JOIN casting
+    ON movie.id=casting.movieid
+ WHERE casting.actorid=
+       (SELECT id
+          FROM actor
+         WHERE name='Harrison Ford')
+
+/* Query 9: Films where Harrison Ford did not get first billing 
+(query instructions explain meaning of ord field: 1 is starring role, 
+with larger numbers meaning further down the cast list)*/
+SELECT movie.title
+  FROM movie JOIN casting
+    ON movie.id=casting.movieid
+ WHERE casting.actorid=
+       (SELECT id
+          FROM actor
+         WHERE name='Harrison Ford')
+   AND casting.ord > 1
+
+/* Query 10: Films and their leading actors from 1962 */
+SELECT movie.title,actor.name
+  FROM casting 
+  JOIN movie ON movie.id=casting.movieid
+  JOIN actor ON actor.id=casting.actorid
+ WHERE (movie.yr=1962 AND casting.ord = 1)
+
+/* Query 11: Years in which Travolta made more than two films 
+(use of HAVING keyword to make query specify at least 3 movies) */
+SELECT yr,COUNT(title) 
+  FROM movie 
+  JOIN casting ON movie.id=movieid
+  JOIN actor ON actorid=actor.id
+ WHERE name='John Travolta'
+ GROUP BY yr
+HAVING COUNT(title)>2
+
+/* Query 12: Films that Julie Andrews performed in, 
+along with their leading actors. 
+1) Nested join "AS mov" selects movies Julie Andrews acted in
+2) Nested join "AS act" selects actor in leading role for all movies
+3) JOIN of mov and act combines the two to select the desired results 
+from the two derived tables.
+ */
+SELECT DISTINCT mov.title, act.name
+  FROM
+    (SELECT movie.title,movie.id AS id
+       FROM movie
+       JOIN casting ON casting.movieid=movie.id
+       JOIN actor   ON casting.actorid=actor.id
+      WHERE actor.name = 'Julie Andrews') AS mov
+  JOIN
+    (SELECT actor.name,casting.movieid AS movieid
+       FROM actor
+       JOIN casting ON casting.actorid=actor.id
+      WHERE casting.ord = 1) AS act
+    ON mov.id = act.movieid 
+
+/* Query 13: Actors who have had top billing in at least 30 movies 
+(more use of HAVING keyword) */
+SELECT x.name
+  FROM
+    (SELECT actor.*,movie.title AS movname
+       FROM movie
+       JOIN casting ON casting.movieid=movie.id
+       JOIN actor   ON casting.actorid=actor.id
+      WHERE casting.ord = 1) AS x
+ GROUP BY x.name
+HAVING COUNT(x.movname) >= 30
+ ORDER BY x.name ASC
+
+/* Query 14: Films from 1978 by number of cast members DESC and title ASC 
+(uses mySQL default that ORDER BY is ASC when not specified) /
+SELECT x.title,y.numcast
+  FROM
+    (SELECT id,title,yr
+       FROM movie
+      WHERE movie.yr = 1978) AS x
+  JOIN 
+    (SELECT movieid, COUNT(actorid) AS numcast
+       FROM casting
+      GROUP BY movieid) AS y
+    ON y.movieid = x.id
+ ORDER BY y.numcast DESC,x.title
+
+/* Query 15: Who has worked with Art Garfunkel? 
+1) Nested join "AS garf" gets casting info for movies with Art Garfunkel
+2) Nested join "AS act" selects actor and casting info for people other than 
+Art Garfunkel
+3) JOIN of garf and act combines the derived tables to get people who acted 
+in a movie with Garfunkel but who are not Garfunkel. */
+SELECT DISTINCT act.name
+  FROM
+    (SELECT actor.*,casting.*
+       FROM casting
+       JOIN actor 
+         ON casting.actorid=actor.id
+      WHERE actor.name = 'Art Garfunkel') AS garf
+  JOIN 
+    (SELECT actor.id,actor.name,casting.movieid
+       FROM actor
+       JOIN casting 
+         ON casting.actorid=actor.id
+      WHERE actor.name <> 'Art Garfunkel') AS act
+    ON act.movieid = garf.movieid 
+

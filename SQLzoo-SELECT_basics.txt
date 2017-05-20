@@ -1,8 +1,10 @@
 /* 
+* Topic: SELECT basics
+* 
+* Status: all query results marked as "Correct answer"
+* 
 * Date of SQLzoo access for documentation:
 * 2017-05-20
-* 
-* Topic: SELECT basics
 * 
 * Table names: 
 * world

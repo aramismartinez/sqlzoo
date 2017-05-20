@@ -1,0 +1,169 @@
+/* 
+* Topic: Self JOINs, using database of bus routes in Edinburgh
+*
+* Status: all query results marked as "Correct answer"
+* 
+* Date of SQLzoo access for documentation:
+* 2017-05-20
+* 
+* Table names: 
+* stops, route
+* 
+* Fields in tables (Primary and Foreign Keys not specified, guessing about PKs): 
+* stops -> id (PK), name
+* dept -> num (PK), company (PK), pos (PK), stop */
+
+/* Query 1: How many separate stops in the entire database? 
+(use of DISTINCT) */
+SELECT COUNT(DISTINCT stop)
+  FROM route
+
+/* Query 2: stops.id for Craiglockhart */
+SELECT stops.id
+  FROM stops
+ WHERE stops.name = 'Craiglockhart' 
+
+/* Query 3: Which stops are on company LRT's route 4? */
+SELECT stops.id, stops.name
+  FROM stops
+  JOIN route
+    ON stops.id = route.stop
+ WHERE route.company = 'LRT' AND route.num = '4'
+
+/* Query 4: Which companies have more than one route that stops at either 
+London Road or at Craiglockhart? */
+/* 
+* version 1: hardcode stops.id values for the stops
+*/
+SELECT company, num, COUNT(*)
+  FROM route 
+ WHERE stop=149 OR stop=53
+ GROUP BY company, num
+HAVING count(*) > 1
+/* 
+* version 2: use nested SELECT statements to get stops.id values 
+*/
+SELECT company, num, COUNT(*)
+  FROM route 
+ WHERE stop=(SELECT id FROM stops WHERE name='Craiglockhart')
+    OR stop=(SELECT id FROM stops WHERE name='London Road')
+ GROUP BY company, num
+HAVING count(*) > 1
+
+/* Query 5: Find the services that go from Craiglockhart to London Road 
+without changing buses. 'Service' does not mean non-stop, but it does mean
+that the passenger never has to change buses.  
+(introduces self JOIN, uses nested SELECT statements) 
+(exercise implies to use hardcoding of stop numbers, but I didn't see that 
+implication until after I'd written with the nested SELCECT statements) */
+SELECT a.company, a.num, a.stop, b.stop
+  FROM route a 
+  JOIN route b 
+    ON (a.company=b.company AND a.num=b.num)
+ WHERE a.stop= 
+       (SELECT stops.id
+          FROM stops
+         WHERE stops.name = 'Craiglockhart')
+   AND b.stop= 
+       (SELECT stops.id
+          FROM stops
+         WHERE stops.name = 'London Road')
+
+/* Query 6: Same query as #5, but exercise specifies selecting data by
+name of stops instead of id numbers 
+(exercise expects stop names to be displayed as well) */
+SELECT a.company, a.num, stopa.name, stopb.name
+FROM route a JOIN route b ON
+  (a.company=b.company AND a.num=b.num)
+  JOIN stops stopa ON (a.stop=stopa.id)
+  JOIN stops stopb ON (b.stop=stopb.id)
+WHERE stopa.name='Craiglockhart' 
+  AND stopb.name='London Road'
+
+/* Query 7: List services between Haymarket and Leith. SQLzoo accepts results 
+whether query uses stop names or stop id numbers. */
+/* 
+* version 1: using names of stops 
+*/ 
+SELECT DISTINCT a.company, a.num 
+  FROM route a JOIN route b 
+    ON (a.company=b.company AND a.num=b.num)
+  JOIN stops stopa ON (a.stop=stopa.id)
+  JOIN stops stopb ON (b.stop=stopb.id)
+WHERE stopa.name='Haymarket' 
+  AND stopb.name='Leith'
+/* 
+* version 2: using id numbers of stops 
+*/ 
+SELECT DISTINCT a.company, a.num 
+  FROM route a JOIN route b 
+    ON (a.company=b.company AND a.num=b.num)
+  JOIN stops stopa ON (a.stop=stopa.id)
+  JOIN stops stopb ON (b.stop=stopb.id)
+WHERE stopa.id=115 -- Haymarket
+  AND stopb.id=137 -- Leith
+
+/* Query 8: Same as previous query, but for Craiglockhart and Tollcross */
+SELECT DISTINCT a.company, a.num 
+  FROM route a JOIN route b 
+    ON (a.company=b.company AND a.num=b.num)
+  JOIN stops stopa ON (a.stop=stopa.id)
+  JOIN stops stopb ON (b.stop=stopb.id)
+WHERE stopa.name='Craiglockhart' 
+  AND stopb.name='Tollcross'
+
+/* Query 9: Which stops can you get to from Craiglockhart 
+* on services offered by the LRT company? 
+* 1) Nested SELECT picks stop id number for Craiglockhart. 
+* 2) AND condition in WHERE statement specifies only services offered by LRT. 
+* 3) JOIN with route b selects services that stop at Craiglockhart. 
+* 4) LEFT JOIN with route a selects stops you can get to with those services. 
+* (the join type must be a LEFT JOIN b since b is filtered down to services 
+* that stop at Craiglockhart *and only stop information for Craiglockhart*). 
+*/
+SELECT DISTINCT stopa.name, a.company, a.num 
+  FROM route a
+  LEFT JOIN route b
+    ON (a.num = b.num AND a.company = b.company)
+  JOIN stops stopa ON (a.stop=stopa.id)
+ WHERE b.stop =
+       (SELECT stops.id
+          FROM stops
+         WHERE stops.name = 'Craiglockhart')
+   AND b.company = 'LRT'
+
+/* Query 10: Which combinations of services allow a passenger to go 
+* from Craiglockhart to Sighthill with exactly one bus transfer? 
+* (derive answer to exercise from previous SQL query) 
+* 1) The nested self JOIN leg1 finds services that stop at Craiglockhart.
+* 2) The nested self JOIN leg2 finds services that stop at Sighthill.
+* 3) JOIN of leg1 and leg2 on stop names stitches the two results together,
+* giving the desired list of transfers to get from one to the other.
+*/
+SELECT DISTINCT 
+       route1,carrier1,stopname1,route2,carrier2
+  FROM 
+  (SELECT a.num AS route1, 
+         a.company AS carrier1, 
+         stopa.name AS stopname1
+    FROM route a JOIN route b 
+      ON (a.company=b.company AND a.num=b.num)
+    JOIN stops stopa ON (stopa.id = b.stop)
+   WHERE a.stop= 
+         (SELECT stops.id
+            FROM stops
+           WHERE stops.name = 'Craiglockhart')
+  ) AS leg1
+JOIN (
+  SELECT c.num AS route2, 
+         c.company AS carrier2, 
+         stopb.name AS stopname2
+    FROM route c JOIN route d 
+      ON (c.company=d.company AND c.num=d.num)
+    JOIN stops stopb ON (stopb.id = d.stop)
+   WHERE c.stop= 
+         (SELECT stops.id
+            FROM stops
+           WHERE stops.name = 'Sighthill')
+  ) AS leg2
+  ON leg1.stopname1 = leg2.stopname2

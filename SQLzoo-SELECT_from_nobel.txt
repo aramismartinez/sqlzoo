@@ -1,0 +1,100 @@
+/* 
+* Topic: SELECT from nobel
+*
+* Status: all query results marked as "Correct answer"
+* 
+* Date of SQLzoo access for documentation:
+* 2017-05-20
+* 
+* Table names: 
+* nobel
+* 
+* Fields in tables:
+* yr, subject, winner
+*/
+
+/* Query 1: all winners in 1950 */
+SELECT yr, subject, winner
+  FROM nobel
+ WHERE yr = 1950
+
+/* Query 2: 1962 prize for Literature */
+SELECT winner
+  FROM nobel
+ WHERE yr = 1962
+   AND subject = 'Literature'
+
+/* Query 3: the photoelectric effect */
+SELECT yr, subject
+  FROM nobel
+ WHERE winner = 'Albert Einstein'
+
+/* Query 4: Peace prize winners since 2000 (inclusive) */
+SELECT winner
+  FROM nobel
+ WHERE yr >= 2000
+   AND subject = 'Peace'
+
+/* Query 5: Literature prizes in the 1980s (strictly in the 80s) */
+SELECT yr, subject, winner
+  FROM nobel
+ WHERE yr >=1980 AND yr <= 1989
+   AND subject = 'Literature'
+
+/* Query 6: full records for US presidents */
+SELECT yr, subject, winner
+  FROM nobel
+ WHERE winner IN ('Theodore Roosevelt',
+                  'Woodrow Wilson',
+                  'Barack Obama',
+                  'Jimmy Carter')
+
+/* Query 7: John prizes */
+SELECT winner
+  FROM nobel
+ WHERE winner LIKE 'John%'
+
+/* Query 8: Physics in 1980 *and* Chemistry in 1984 */
+SELECT yr, subject, winner
+  FROM nobel
+ WHERE (yr =1980 AND subject = 'Physics') 
+   OR (yr =1984 AND subject = 'Chemistry')
+
+/* Query 9: 1980, except Medicine and Chemistry */
+SELECT yr, subject, winner
+  FROM nobel
+ WHERE yr =1980 
+   AND subject NOT IN ('Chemistry', 'Medicine')
+
+/* Query 10: Medicine before 1910 and Literature from 2004 onward;
+Medicine date bound exclusive but Literature date bound inclusive*/
+SELECT yr, subject, winner
+  FROM nobel
+ WHERE (yr < 1910 AND subject = 'Medicine') 
+   OR (yr >= 2004 AND subject = 'Literature')
+
+/* Query 11: Umlaut winner PETER GRÜNBERG 
+(checking for non-ASCII chars) */
+SELECT yr, subject, winner
+  FROM nobel
+ WHERE winner LIKE 'PETER GRÜNBERG'
+
+/* Query 12: Apostrophe winner EUGENE O'NEILL 
+(checking for escaped single quote)*/
+SELECT yr, subject, winner
+  FROM nobel
+ WHERE winner LIKE 'EUGENE O\'NEILL'
+
+/* Query 13: Sir Nobels */
+SELECT winner, yr, subject
+  FROM nobel
+ WHERE winner LIKE 'Sir%'
+   ORDER BY yr DESC, winner ASC
+
+/* Query 14: 1984 winners sorted by field, with Physics last and 
+Chemistry just before that (ordered by name last, but required due
+to properties of ORDER BY) */
+SELECT winner, subject
+  FROM nobel
+ WHERE yr=1984
+ ORDER BY subject IN ('Chemistry','Physics') ASC, subject ASC, winner ASC

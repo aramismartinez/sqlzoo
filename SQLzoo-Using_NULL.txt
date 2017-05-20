@@ -1,0 +1,139 @@
+/* 
+* Topic: Using NULL, using database of teacher and department data
+*
+* Status: all query results marked as "Correct answer"
+* 
+* Date of SQLzoo access for documentation:
+* 2017-05-20
+* 
+* Table names: 
+* teacher, dept
+* 
+* Fields in tables (Primary and Foreign Keys not specified): 
+* teacher -> id, dept, name, phone, mobile
+* dept -> id, name */
+
+/* Query 1: NULL department 
+(demonstration that equality comparison "=" cannot be used with NULL  */
+SELECT name
+  FROM teacher
+ WHERE dept IS NULL
+
+/* Query 2: Teachers with NULL dept and departments with no teachers 
+(shows that INNER JOIN misses records where one or both of the fields 
+used for the JOIN have a NULL value) */
+SELECT teacher.name, dept.name
+ FROM teacher INNER JOIN dept
+           ON (teacher.dept=dept.id)
+
+/* Query 3: JOIN teacher and dept tables without missing any teachers */
+/* 
+* version 1: LEFT JOIN gets all teacher records if teacher is on left
+*/ 
+SELECT teacher.name, dept.name
+  FROM teacher 
+  LEFT JOIN dept
+    ON (teacher.dept=dept.id)
+/* 
+* version 2: RIGHT JOIN gets all teacher records if teacher is on right
+*/ 
+SELECT teacher.name, dept.name
+  FROM dept 
+  RIGHT JOIN teacher
+    ON (teacher.dept=dept.id)
+/* 
+* version 3: UNION-based solution adds requirement that teacher be non-null before UNION
+*/
+(SELECT teacher.name, dept.name
+  FROM teacher 
+ RIGHT JOIN dept
+    ON (teacher.dept=dept.id)
+ WHERE teacher.name IS NOT NULL)
+UNION
+(SELECT teacher.name, dept.name
+  FROM dept 
+  LEFT JOIN teacher
+    ON (teacher.dept=dept.id)
+ WHERE teacher.name IS NOT NULL)
+
+/* Query 4:JOIN teacher and dept tables without missing any departments */
+/* 
+* version 1: RIGHT JOIN gets all teacher records if dept is on right
+*/
+SELECT teacher.name, dept.name
+  FROM teacher 
+ RIGHT JOIN dept
+    ON (teacher.dept=dept.id)
+/* 
+* version 2: LEFT JOIN gets all teacher records if dept is on left
+*/
+SELECT teacher.name, dept.name
+  FROM dept 
+  LEFT JOIN teacher
+    ON (teacher.dept=dept.id)
+/* 
+* version 3: UNION-based allowable since dept.id must be non-null and there
+* is no requirement that a department has at least one teacher.
+*/
+(SELECT teacher.name, dept.name
+  FROM teacher 
+ RIGHT JOIN dept
+    ON (teacher.dept=dept.id))
+UNION
+(SELECT teacher.name, dept.name
+  FROM dept 
+  LEFT JOIN teacher
+    ON (teacher.dept=dept.id))
+
+/* Query 5: Get teacher names and cell numbers, allowing for teachers with no recorded cell number (NULL value for teacher.mobile) 
+(introduction of COALESCE to deal with NULL field values, replaces NULL value with specified number) */
+SELECT name, 
+       COALESCE(mobile,'07986 444 2266') AS mobi
+  FROM teacher
+
+/* Query 6: Get teacher names and department names, allowing for teachers with no department (NULL value for teacher.dept)  */
+SELECT teacher.name, 
+       COALESCE(dept.name,'None') AS department
+  FROM teacher
+  LEFT JOIN dept
+    ON teacher.dept = dept.id
+
+/* Query 7: How many teachers? How many mobile phone numbers? */
+SELECT COUNT(a.name), COUNT (b.mobile)
+  FROM teacher a
+ LEFT JOIN teacher b
+   ON a.name = b.name
+
+/* Query 8: How many staff in each department? */
+SELECT dept.name, 
+       COUNT(teacher.name)
+  FROM teacher
+ RIGHT JOIN dept
+    ON teacher.dept = dept.id
+ GROUP BY dept.name
+
+/* Query 9: Categorize all staff as either 'Sci' or 'Art' 
+(exercise is to get practice with CASE statements) */
+/* 
+* LEFT JOIN version, RIGHT JOIN version with swapped teacher and dept works 
+*/
+SELECT teacher.name, 
+       CASE WHEN dept.id = 1 THEN 'Sci' 
+            WHEN dept.id = 2 THEN 'Sci' 
+            ELSE 'Art'
+       END
+  FROM teacher
+  LEFT JOIN dept
+    ON teacher.dept = dept.id
+
+/* Query 10: Categorize all staff as either 'Sci', 'Art', or 'None' 
+(exercise is to get practice with CASE statements) */
+SELECT teacher.name, 
+       CASE WHEN dept.id = 1 THEN 'Sci' 
+            WHEN dept.id = 2 THEN 'Sci'  
+            WHEN dept.id = 3 THEN 'Art'
+            ELSE 'None'
+       END
+  FROM teacher
+  LEFT JOIN dept
+    ON teacher.dept = dept.id
